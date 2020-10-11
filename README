@@ -7,6 +7,10 @@ For questions or problems, please contact rich@binomial.info.
 
 This release of bc7e.ispc is covered by the Apache 2.0 license - see LICENSE.
 
+-- Special Thanks
+
+A huge thanks to the folks at Activision for enabling us to open source this code.
+
 -- Quick Intro
 
 This package contains bc7e.ispc (or just BC7E), our fast and high quality SIMD

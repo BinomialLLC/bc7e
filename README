@@ -26,7 +26,7 @@ colorspace metrics.
 -- Building It
 
 Currently, the included example compiles under Windows, but it should be easy to compile 
-under other platforms. Use Visual Studio 2019. We'll add CMake files next.
+under other platforms. We tested this release with Visual Studio 2019. We'll add CMake files next.
 
 To build it, you'll need a copy of Intel's ISPC compiler for your platform:
 

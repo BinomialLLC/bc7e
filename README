@@ -1,0 +1,145 @@
+Basis SIMD BC7 Texture Encoder v1.18
+Copyright (C) 2018-2020 Binomial LLC, All rights reserved
+
+For questions or problems, please contact rich@binomial.info.
+
+-- Legal Stuff
+
+This release of bc7e.ispc is covered by the Apache 2.0 license - see LICENSE.
+
+-- Quick Intro
+
+This package contains bc7e.ispc (or just BC7E), our fast and high quality SIMD
+BC7 encoder. This encoder was designed to compete directly against the best
+available open source BC7 encoders.
+
+In practice, this means we compete directly against Intel's "ispc_texcomp"
+library, as the other available CPU encoders are impractically slow. BC7E is
+usually around 2-3x faster vs. ispc_texcomp at the same average quality (as
+measured by PSNR or SSIM), and up to ~8x faster vs. ispc_texcomp's "slow"
+profile. Note that BC7E is not a derivative of ispc_texcomp - it's a totally
+new encoder using our own algorithms.
+
+BC7E currently supports Euclidean distance or perceptual (scaled YCbCr)
+colorspace metrics. 
+
+-- Building It
+
+To build it, you'll need a copy of Intel's ISPC compiler for your platform:
+
+https://ispc.github.io/downloads.html
+
+The package contains the latest pre-built version of ispc.exe (v1.10.0) as of
+3/24/19. We've tested BC7E under Windows, Linux and OSX. We've tested mostly
+using ispc v1.82, and less with v1.10.0.
+
+bc7e.ispc is built like this (for max perf on all CPU's):
+ispc -g -O2 "bc7e.ispc" -o "$bc7e.obj" -h "$bc7e_ispc.h" --target=sse2,sse4,avx,avx2 --opt=fast-math --opt=disable-assertions
+
+"--opt=fast-math" is optional. In some quick testing, it didn't make a noticeable difference.
+
+If determinism across Intel/AMD CPU's is important in your usage case, you'll want to probably limit the targets to only SSE and disable fast math.
+
+In the .ispc source code, we've prefixed all scatter/gathers with "#pragma ignore warning(perf)", as they just cloud the compiler's output and aren't performance critical.
+
+-- API
+
+The C-style API is modeled after ispc_texcomp's and is very simple. Note that
+(just like with ispc_texcomp) you must do all multithreading on your own - BC7E
+just encodes blocks on a single thread using SIMD instructions.
+
+First, before doing anything with BC7E, call ispc::bc7e_compress_block_init() a
+single time (and preferably only a single time). This method computes some
+lookup tables used to accelerate encoding. If you fail to call this method, the
+encoder will always return all-zero BC7 block data. (This is different from
+ispc_texcomp.)
+
+Next, call one of these functions in the BC7E ispc code to select the encoding
+profile you want to use:
+
+ispc::bc7e_compress_block_params_init_ultrafast(struct bc7e_compress_block_params * p, bool perceptual) (mode 6 only for non-alpha blocks)
+ispc::bc7e_compress_block_params_init_veryfast()
+ispc::bc7e_compress_block_params_init_fast() 
+ispc::bc7e_compress_block_params_init_basic() (a good default profile)
+ispc::bc7e_compress_block_params_init_slow()
+
+The fastest mode is ultrafast on opaque blocks, which selects an optimized code path that only supports mode 6.
+
+Note these functions are calibrated to compete against ispc_texcomp's similarly
+named profiles. The "slow" profile is significantly faster than ispc_texcomp's
+(by around 8x). Also, unlike ispc_texcomp BC7E automatically determines if each
+block has any pixels using alpha, so there's no need to select an alpha specific profile.
+
+These two profiles are slower than "slow", but have higher quality, and are still faster than ispc_texcomp's "slow" profile:
+ispc::bc7e_compress_block_params_init_slowest()
+ispc::bc7e_compress_block_params_init_veryslow()
+
+It's possible to customize the codec yourself by tweaking one of these basic profiles.
+
+Each of these init functions takes a pointer to an encoding params struct
+(ispc::bc7e_compress_block_params), and a bool "perceptual" parameter. If you
+know the source pixels will be in sRGB space, enabling perceptual mode will
+noticeably improve the Y PSNR/SSIM, possibly allowing you to use a faster
+encoding profile.
+
+These init function are all thread safe: they just fill in the params struct you provide with internal codec settings.
+
+Finally, call ispc::bc7e_compress_blocks() with an array of 4x4 pixel blocks. You should
+always call this function with a multiple of 8-16 blocks. Try to call it with at
+least 32-64 blocks. Note that this function wants a pointer to an array of 16
+pixel blocks, one block after the other, which is slightly different from
+ispc_texcomp's input. This function is thread safe.
+
+If you call this function without calling bc7e_compress_block_init() first, the
+encoder will return blocks filled with all 0's (or assert() if you build the
+ispc file in debug).
+
+-- Optional support for encoding textures with decorrelated alpha channels
+
+BC7's is weakest with textures containing decorrelated alpha channels. This can
+lead to noticeable blockiness in either RGB or A with every encoder we've tried.
+By default, the encoder doesn't do anything special vs. other encoders to handle
+this scenario. It normally optimizes for lowest overall RGBA error, which can
+cause the encoder to select correlated alpha modes that cause either RGB or A to
+appear overly blocky (but still leading to overall lowest error).
+
+We've added an optional mode 6/7 specific error metric weighting vector, which
+allows you to nudge the encoder to use the correlated alpha modes less often.
+
+To use this feature, after you call one of the profile selection functions
+(bc7e_compress_block_params_init_basic() etc.), you can optionally set the
+values in the "m_alpha_settings.m_mode67_error_weight_mul[]" array. 
+
+This array contains a per-component error weight multiplier that's
+only used in modes 6/7. This allows you to deemphasize the usage of the
+correlated alpha modes (6/7). These modes can cause blockiness in either RGB or
+A on highly uncorrelated textures containing complex alpha channels. To use
+this, I would first start with setting the RGB (first 3 array values) to 3,3,3
+or 5,5,5 and test the results. 
+
+Setting these values higher than 1 will cause the encoder to use modes 4/5 more
+often on alpha blocks. This will result in higher overall PSNR/SSIM error, but
+hopefully less blockiness.
+
+-- bc7enc example
+
+We've included a very simple C++ command line example of how to use BC7E. It uses
+OpenMP for threading. It's a simple tool that packs images to DX10 BC7 .DDS
+files. (Note that note all DDS viewers support these newer files.)
+
+It should build on Windows/Linux/OSX (although we didn't get a chance to include
+the CMake files in v1.18). We've built it with VS2015 and VS2017.
+
+-- Possible future improvements
+
+Currently we're thinking along the lines of faster encoding by more closely
+tuning the code generation of the key inner loops for SSE4/AVX, more
+decorrelated alpha improvements, and custom error metrics. We have done a Pareto
+analysis of the codec, which has given us some interesting directions to look
+at. Any suggestions are welcome.
+
+-- Bug reports/questions
+
+If you have any bugs or suggestions about this codec, don't hesitate to contact Rich
+Geldreich: rich@binomial.info or richgel99@gmail.com.
+

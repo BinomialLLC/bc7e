@@ -27,6 +27,8 @@ new encoder using our own algorithms.
 BC7E currently supports Euclidean distance or perceptual (scaled YCbCr)
 colorspace metrics. 
 
+BC7E doesn't use approximate (and non-deterministic/ill-defined) SSE rsqrt() or rcp() instructions, unlike ispc_texcomp.
+
 -- Building It
 
 Currently, the included example compiles under Windows, but it should be easy to compile 

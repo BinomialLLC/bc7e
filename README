@@ -3,6 +3,8 @@ Copyright (C) 2018-2020 Binomial LLC, All rights reserved
 
 For questions or problems, please contact rich@binomial.info.
 
+Note the very latest version of bc7e.ispc, with determnism fixes and improvements to solid color block encoding, is [here](https://github.com/richgel999/bc7enc_rdo).
+
 -- Legal Stuff
 
 This release of bc7e.ispc is covered by the Apache 2.0 license - see LICENSE.

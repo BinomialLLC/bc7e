@@ -5,7 +5,7 @@ For questions or problems, please contact rich@binomial.info.
 
 Note the very latest version of bc7e.ispc, with determinism fixes and improvements to solid color block encoding, is here: https://github.com/richgel999/bc7enc_rdo. This repo is an archive of the original release of bc7e.
 
-*Note: An even faster alternative to bc7e.ispc is now available - see [bc7f](https://richg42.blogspot.com/2026/01/bc7f-new-real-time-analytical-bc7.html) (or [here](https://github.com/BinomialLLC/basis_universal/wiki/Transcoder-Internals-%E2%80%90-Analytical-Real%E2%80%90Time-Encoders)).*
+Note: An even faster alternative to bc7e.ispc is now available - see [bc7f](https://richg42.blogspot.com/2026/01/bc7f-new-real-time-analytical-bc7.html) (or [here](https://github.com/BinomialLLC/basis_universal/wiki/Transcoder-Internals-%E2%80%90-Analytical-Real%E2%80%90Time-Encoders)).
 
 -- Legal Stuff
 
